@@ -1,0 +1,1 @@
+Sim. Porque os processos estão compartilhando a mesma memória e alteram o valor juntos, interrompendo um ao outro.
