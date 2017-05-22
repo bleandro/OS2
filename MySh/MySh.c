@@ -8,7 +8,7 @@
 void typePrompt();
 void replaceHomeDir(char*);
 int create_process(char***, int);
-void spawn_proc(int, int, char**);
+int spawn_proc(int, int, char**);
 
 void clean_up_child_process (int signal_number)
 {
@@ -31,8 +31,11 @@ int main() {
     typePrompt();                       // Shows prompt on screen
 
     // Reads and parser user input
+    //fflush(stdin);
     fgets(fullCommand, sizeof(fullCommand), stdin);
-    fullCommand[strlen(fullCommand)-1] = '\0';
+
+    if (fullCommand[strlen(fullCommand)-1] == '\n')
+       fullCommand[strlen(fullCommand)-1] = '\0';
 
     // If the user types "exit" the shell is exited
     if (strcmp(fullCommand, "exit") == 0) exit(0);
@@ -47,9 +50,9 @@ int main() {
       pipeCount++;
 
     // Allocate the arg_list for pipes
-    char*** arg_list = (char***) malloc(pipeCount * sizeof(char**));
+    char*** arg_list = (char***) malloc((pipeCount+1) * sizeof(char**));
     // Allocate the command array
-    char** command = (char**) malloc(pipeCount * sizeof(char*));
+    char** command = (char**) malloc((pipeCount+1) * sizeof(char*));
 
     int i_pipes = 0;
     strcpy(tokenFullCommand, fullCommand);
@@ -105,9 +108,13 @@ int main() {
        continue;
     }
 
+    int stdin_cp = STDIN_FILENO;
+    int stdout_cp = STDOUT_FILENO;
+
     create_process(arg_list, pipeCount+1); // cmd count should be pipeCount+1 [Example: ls | cat ]. 1 pipe. 2 commands.
-    int status;
-    wait(&status);
+    wait(0);
+    dup2(stdin_cp, STDIN_FILENO);
+    dup2(stdout_cp, STDOUT_FILENO);
 
   } // END SHELL WHILE(1)
 
@@ -133,7 +140,9 @@ int create_process(char ***arg_list, int cmd_count)
        out = pipe_fd[1];
 
     /* pipe_fd[1] is the write end of the pipe, we carry "in" from the previous iteration.  */
-    spawn_proc(in, out, arg_list[command_i]);
+    if ( (pid = spawn_proc(in, out, arg_list[command_i])) < 0 ) {
+       fprintf(stderr, "Command '%s' not found\n", arg_list[command_i][0]);
+    }
 
     /* No need for the write end of the pipe, the child will write here.  */
     close(pipe_fd[1]);
@@ -141,9 +150,11 @@ int create_process(char ***arg_list, int cmd_count)
     /* Keep the read end of the pipe, the next child will read from there.  */
     in = pipe_fd[0];
   }
+
+  return pid;
 }
 
-void spawn_proc(int in, int out, char **command) {
+int spawn_proc(int in, int out, char **command) {
   pid_t pid;
 
   if ((pid = fork()) == 0) {
@@ -157,9 +168,10 @@ void spawn_proc(int in, int out, char **command) {
       close(out);
     }
 
-    execvp(command[0], command);
-    fprintf(stderr, "Command '%s' not found\n", command[0]);
+    return execvp(command[0], command);
   }
+
+  return pid;
 }
 
 void typePrompt(){
