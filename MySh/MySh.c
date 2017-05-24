@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,10 +6,15 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-void typePrompt();
+void clear_input(char* command);
+int  create_process(char***, int);
+void ignore_handler(int signal_number);
+int  read_command(char* command);
 void replaceHomeDir(char*);
-int create_process(char***, int);
+void signal_handler();
 void spawn_proc(int, int, char**);
+void typePrompt();
+
 
 void clean_up_child_process (int signal_number)
 {
@@ -25,14 +31,17 @@ int main() {
   sigaction (SIGCHLD, &sigchld_action, NULL);
 
   char fullCommand[255];
+  fullCommand[0] = ' ';
   int firstArgCount;
+  signal_handler();
 
   while(1) {                            // Repeats forever
-    typePrompt();                       // Shows prompt on screen
+    do{
+      typePrompt();                       // Shows prompt on screen
+      clear_input(fullCommand);              //Clear stdin
+    }while(!(read_command(fullCommand)));
 
-    // Reads and parser user input
-    fgets(fullCommand, sizeof(fullCommand), stdin);
-    fullCommand[strlen(fullCommand)-1] = '\0';
+      fullCommand[strlen(fullCommand)-1] = '\0';
 
     // If the user types "exit" the shell is exited
     if (strcmp(fullCommand, "exit") == 0) exit(0);
@@ -193,4 +202,39 @@ void replaceHomeDir(char* currDir) {
     strcpy(currDir, "~");
     strcat(currDir, tmpCurrDir);
   }
+}
+
+int read_command(char* fullCommand){
+  // Reads and parser user input
+  fgets(fullCommand, sizeof(fullCommand), stdin);
+    if (feof(stdin)) {
+      // CTRL-D case
+      strcpy(fullCommand, "exit");
+      return 1;
+  } else{ // Clears the error indication flag and ^C, ^Z or any other unknown character
+      if (ferror(stdin)) {
+        clearerr(stdin);
+        return 0;
+      }
+
+    }
+    return 1;
+}
+
+void signal_handler(){
+  struct sigaction sa;
+  memset(&sa, 0, sizeof(sa));
+  sa.sa_handler = &ignore_handler;
+  sigaction(SIGTSTP, &sa, NULL);
+  sigaction(SIGINT, &sa, NULL);
+}
+
+void ignore_handler(int signal_number){
+  fprintf(stdout, "\n");
+  return;
+}
+
+void clear_input(char* fullCommand) {
+    fflush(stdin);
+    fullCommand[0] = '\0';
 }
