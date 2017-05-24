@@ -39,9 +39,9 @@ int main() {
 
       // Reads and parser user input
       fgets(fullCommand, sizeof(char) * STR_MAX, stdin);
-
       if (fullCommand[strlen(fullCommand)-1] == '\n')
          fullCommand[strlen(fullCommand)-1] = '\0';
+
     }while(!(test_stdin(fullCommand)));
 
     // If the user types "exit" the shell is exited
@@ -149,6 +149,7 @@ int create_process(char ***arg_list, int cmd_count)
     /* pipe_fd[1] is the write end of the pipe, we carry "in" from the previous iteration.  */
     if ( (pid = spawn_proc(in, out, arg_list[command_i])) < 0 ) {
        fprintf(stderr, "Command '%s' not found\n", arg_list[command_i][0]);
+       exit(-1);
     }
 
     /* No need for the write end of the pipe, the child will write here.  */
