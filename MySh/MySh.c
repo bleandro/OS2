@@ -226,11 +226,17 @@ int test_stdin(char* fullCommand){
 }
 
 void signal_handler(){
-  struct sigaction sa;
-  memset(&sa, 0, sizeof(sa));
-  sa.sa_handler = &ignore_handler;
-  sigaction(SIGTSTP, &sa, NULL);
-  sigaction(SIGINT, &sa, NULL);
+  // CTRL + C SIGNAL
+  struct sigaction sigint_action;
+  memset(&sigint_action, 0, sizeof(sigint_action));
+  sigint_action.sa_handler = &ignore_handler;
+  sigaction(SIGINT, &sigint_action, NULL);
+
+  // CTRL + Z SIGNAL
+  struct sigaction sigstp_action;
+  memset(&sigstp_action, 0, sizeof(sigstp_action));
+  sigstp_action.sa_handler = SIG_IGN;
+  sigaction(SIGTSTP, &sigstp_action, NULL);
 
   /* Handle SIGCHLD by calling clean_up_child_process.  */
   struct sigaction sigchld_action;
