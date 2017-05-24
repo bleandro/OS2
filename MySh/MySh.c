@@ -67,41 +67,41 @@ int main() {
     // Allocate the command array
     char** command = (char**) malloc((pipeCount+1) * sizeof(char*));
 
-    int i_pipes = 0;
+    int i_command = 0;
     strcpy(tokenFullCommand, fullCommand);
     for(token_p = strtok(tokenFullCommand, "|"); token_p != NULL; token_p = strtok(NULL, "|")) {
-      command[i_pipes] = (char*) malloc(STR_MAX * sizeof(char));
-      strcpy(command[i_pipes], token_p);
-      i_pipes++;
+      command[i_command] = (char*) malloc(STR_MAX * sizeof(char));
+      strcpy(command[i_command], token_p);
+      i_command++;
     }
 
-    i_pipes = 0;
+    i_command = 0;
     strcpy(tokenFullCommand, fullCommand);
-    while(i_pipes <= pipeCount) {
+    while(i_command <= pipeCount) {
       // Counts tokens
       char *token;
       char tokenCommand[STR_MAX];
-      strcpy(tokenCommand, command[i_pipes]);
+      strcpy(tokenCommand, command[i_command]);
       int argCount = 0;
       for(token = strtok(tokenCommand, " "); token != NULL; token = strtok(NULL, " "))
         argCount++;
 
-      if (i_pipes == 0) firstArgCount = argCount; // Store to use in "Change Dir" (CD) part
+      if (i_command == 0) firstArgCount = argCount; // Store to use in "Change Dir" (CD) part
 
       // Allocate the arg_list for commands
-      arg_list[i_pipes] = (char**) malloc((argCount+1) * sizeof(char*));
+      arg_list[i_command] = (char**) malloc((argCount+1) * sizeof(char*));
 
       // Copies the tokens values to arg_list
       int j_command = 0;
-      strcpy(tokenCommand, command[i_pipes]);
+      strcpy(tokenCommand, command[i_command]);
       for(token = strtok(tokenCommand, " "); token != NULL; token = strtok(NULL, " ")) {
         // Allocate the arg_list for arguments
-        arg_list[i_pipes][j_command] = (char*) malloc(STR_MAX * sizeof(char));
-        strcpy(arg_list[i_pipes][j_command], token);
+        arg_list[i_command][j_command] = (char*) malloc(STR_MAX * sizeof(char));
+        strcpy(arg_list[i_command][j_command], token);
         j_command++;
       }
-      arg_list[i_pipes][j_command] = NULL;
-      i_pipes++;
+      arg_list[i_command][j_command] = NULL;
+      i_command++;
     }
     /* END -------------------------- building arg_list -------------------------- */
 
