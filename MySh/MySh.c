@@ -6,15 +6,17 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-void clear_input(char* command);
+#define STR_MAX 255
+
+void clear_input(char*);
 int  create_process(char***, int);
-void ignore_handler(int signal_number);
-int  read_command(char* command);
+void ignore_handler(int);
+int  test_stdin(char*);
 void replaceHomeDir(char*);
 void signal_handler();
-void spawn_proc(int, int, char**);
 void typePrompt();
-
+int create_process(char***, int);
+int spawn_proc(int, int, char**);
 
 void clean_up_child_process (int signal_number)
 {
@@ -24,24 +26,23 @@ void clean_up_child_process (int signal_number)
 }
 
 int main() {
-  /* Handle SIGCHLD by calling clean_up_child_process.  */
-  struct sigaction sigchld_action;
-  memset (&sigchld_action, 0, sizeof (sigchld_action));
-  sigchld_action.sa_handler = &clean_up_child_process;
-  sigaction (SIGCHLD, &sigchld_action, NULL);
-
-  char fullCommand[255];
-  fullCommand[0] = ' ';
+  char fullCommand[STR_MAX];
+  //fullCommand[0] = ' ';
   int firstArgCount;
   signal_handler();
 
   while(1) {                            // Repeats forever
+    // Reads and parser user input
     do{
       typePrompt();                       // Shows prompt on screen
-      clear_input(fullCommand);              //Clear stdin
-    }while(!(read_command(fullCommand)));
+      clear_input(fullCommand);           //Clear stdin
 
-      fullCommand[strlen(fullCommand)-1] = '\0';
+      // Reads and parser user input
+      fgets(fullCommand, sizeof(char) * STR_MAX, stdin);
+
+      if (fullCommand[strlen(fullCommand)-1] == '\n')
+         fullCommand[strlen(fullCommand)-1] = '\0';
+    }while(!(test_stdin(fullCommand)));
 
     // If the user types "exit" the shell is exited
     if (strcmp(fullCommand, "exit") == 0) exit(0);
@@ -49,21 +50,21 @@ int main() {
     /* BEGIN -------------------------- building arg_list -------------------------- */
     // Counts pipes
     char *token_p;
-    char tokenFullCommand[255];
+    char tokenFullCommand[STR_MAX];
     strcpy(tokenFullCommand, fullCommand);
     int pipeCount = -1;
     for(token_p = strtok(tokenFullCommand, "|"); token_p != NULL; token_p = strtok(NULL, "|"))
       pipeCount++;
 
     // Allocate the arg_list for pipes
-    char*** arg_list = (char***) malloc(pipeCount * sizeof(char**));
+    char*** arg_list = (char***) malloc((pipeCount+1) * sizeof(char**));
     // Allocate the command array
-    char** command = (char**) malloc(pipeCount * sizeof(char*));
+    char** command = (char**) malloc((pipeCount+1) * sizeof(char*));
 
     int i_pipes = 0;
     strcpy(tokenFullCommand, fullCommand);
     for(token_p = strtok(tokenFullCommand, "|"); token_p != NULL; token_p = strtok(NULL, "|")) {
-      command[i_pipes] = (char*) malloc(255 * sizeof(char));
+      command[i_pipes] = (char*) malloc(STR_MAX * sizeof(char));
       strcpy(command[i_pipes], token_p);
       i_pipes++;
     }
@@ -73,7 +74,7 @@ int main() {
     while(i_pipes <= pipeCount) {
       // Counts tokens
       char *token;
-      char tokenCommand[255];
+      char tokenCommand[STR_MAX];
       strcpy(tokenCommand, command[i_pipes]);
       int argCount = 0;
       for(token = strtok(tokenCommand, " "); token != NULL; token = strtok(NULL, " "))
@@ -89,7 +90,7 @@ int main() {
       strcpy(tokenCommand, command[i_pipes]);
       for(token = strtok(tokenCommand, " "); token != NULL; token = strtok(NULL, " ")) {
         // Allocate the arg_list for arguments
-        arg_list[i_pipes][j_command] = (char*) malloc(255 * sizeof(char));
+        arg_list[i_pipes][j_command] = (char*) malloc(STR_MAX * sizeof(char));
         strcpy(arg_list[i_pipes][j_command], token);
         j_command++;
       }
@@ -104,7 +105,7 @@ int main() {
           char homeDir[50] = "";
           strcpy(homeDir, getenv("HOME"));
 
-          arg_list[0][1] = (char*) malloc(255 * sizeof(char));
+          arg_list[0][1] = (char*) malloc(STR_MAX * sizeof(char));
           strcpy(arg_list[0][1], homeDir);
        }
 
@@ -114,9 +115,13 @@ int main() {
        continue;
     }
 
+    int stdin_cp = STDIN_FILENO;
+    int stdout_cp = STDOUT_FILENO;
+
     create_process(arg_list, pipeCount+1); // cmd count should be pipeCount+1 [Example: ls | cat ]. 1 pipe. 2 commands.
-    int status;
-    wait(&status);
+    wait(0);
+    dup2(stdin_cp, STDIN_FILENO);
+    dup2(stdout_cp, STDOUT_FILENO);
 
   } // END SHELL WHILE(1)
 
@@ -142,7 +147,9 @@ int create_process(char ***arg_list, int cmd_count)
        out = pipe_fd[1];
 
     /* pipe_fd[1] is the write end of the pipe, we carry "in" from the previous iteration.  */
-    spawn_proc(in, out, arg_list[command_i]);
+    if ( (pid = spawn_proc(in, out, arg_list[command_i])) < 0 ) {
+       fprintf(stderr, "Command '%s' not found\n", arg_list[command_i][0]);
+    }
 
     /* No need for the write end of the pipe, the child will write here.  */
     close(pipe_fd[1]);
@@ -150,9 +157,11 @@ int create_process(char ***arg_list, int cmd_count)
     /* Keep the read end of the pipe, the next child will read from there.  */
     in = pipe_fd[0];
   }
+
+  return pid;
 }
 
-void spawn_proc(int in, int out, char **command) {
+int spawn_proc(int in, int out, char **command) {
   pid_t pid;
 
   if ((pid = fork()) == 0) {
@@ -166,9 +175,10 @@ void spawn_proc(int in, int out, char **command) {
       close(out);
     }
 
-    execvp(command[0], command);
-    fprintf(stderr, "Command '%s' not found\n", command[0]);
+    return execvp(command[0], command);
   }
+
+  return pid;
 }
 
 void typePrompt(){
@@ -183,7 +193,7 @@ void typePrompt(){
   fprintf(stdout, "%s@%s:", username, hostname);
 
   //Prompt current directory
-  char currDir[255] = "";
+  char currDir[STR_MAX] = "";
   getcwd(currDir, sizeof(currDir));
   replaceHomeDir(currDir);
   fprintf(stdout, "%s$ ", currDir);
@@ -193,7 +203,7 @@ void replaceHomeDir(char* currDir) {
   char homeDir[50] = "";
   strcpy(homeDir, getenv("HOME"));
 
-  char tmpCurrDir[255] = "";
+  char tmpCurrDir[STR_MAX] = "";
   strcpy(tmpCurrDir, currDir);
   tmpCurrDir[strlen(homeDir)] = '\0';
 
@@ -204,21 +214,15 @@ void replaceHomeDir(char* currDir) {
   }
 }
 
-int read_command(char* fullCommand){
-  // Reads and parser user input
-  fgets(fullCommand, sizeof(fullCommand), stdin);
-    if (feof(stdin)) {
-      // CTRL-D case
-      strcpy(fullCommand, "exit");
-      return 1;
-  } else{ // Clears the error indication flag and ^C, ^Z or any other unknown character
-      if (ferror(stdin)) {
-        clearerr(stdin);
-        return 0;
-      }
-
-    }
-    return 1;
+int test_stdin(char* fullCommand){
+  if (feof(stdin)) {
+    // CTRL-D case
+    strcpy(fullCommand, "exit");
+  } else if (ferror(stdin)) { // Clears the error indication flag and ^C, ^Z or any other unknown character
+    clearerr(stdin);
+    return 0;
+  }
+  return 1;
 }
 
 void signal_handler(){
@@ -227,6 +231,12 @@ void signal_handler(){
   sa.sa_handler = &ignore_handler;
   sigaction(SIGTSTP, &sa, NULL);
   sigaction(SIGINT, &sa, NULL);
+
+  /* Handle SIGCHLD by calling clean_up_child_process.  */
+  struct sigaction sigchld_action;
+  memset (&sigchld_action, 0, sizeof(sigchld_action));
+  sigchld_action.sa_handler = &clean_up_child_process;
+  sigaction(SIGCHLD, &sigchld_action, NULL);
 }
 
 void ignore_handler(int signal_number){
