@@ -1,3 +1,9 @@
+/*
+    Bruno Vedoveto Leandro
+    Giovanna Cazelato Pires
+    Wesley Otto
+*/
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
