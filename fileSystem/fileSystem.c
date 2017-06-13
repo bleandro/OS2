@@ -3,6 +3,29 @@
 #include <stdlib.h>
 
 #define MAX_STR 255
+#define MAX_FILENAME_SIZE 30
+#define SYSTEM_RESERVED_SPACE 10
+
+// Used in metadata
+typedef enum dt_type {directory, file};
+
+// We will actually use metadata just to distinguish directories and files and fileSize
+typedef struct dt_metadata {
+  dt_type type;
+} dt_metadata;
+
+// Directory Table tell us where is the "Starting Block" of a file or directory
+typedef struct directoryTable {
+  fileName char[MAX_FILENAME_SIZE];
+  int startingBlockIndex;
+  dt_metadata metadata;
+} directoryTable;
+
+// File Allocation Table used to allocate file blocks
+typedef struct fileAllocationTable {
+  int isBusy; /* 0 for false or 1 for true */
+  int nextBlockIndex;
+}
 
 //My fileSystem functions
 int fs_mkdir(char*);
