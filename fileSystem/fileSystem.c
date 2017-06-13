@@ -7,7 +7,7 @@
 #define SYSTEM_RESERVED_SPACE 10
 
 // Used in metadata
-typedef enum dt_type {directory, file};
+typedef enum dt_type {directory, file} dt_type;
 
 // We will actually use metadata just to distinguish directories and files and fileSize
 typedef struct dt_metadata {
@@ -16,7 +16,7 @@ typedef struct dt_metadata {
 
 // Directory Table tell us where is the "Starting Block" of a file or directory
 typedef struct directoryTable {
-  fileName char[MAX_FILENAME_SIZE];
+  char fileName[MAX_FILENAME_SIZE];
   int startingBlockIndex;
   dt_metadata metadata;
 } directoryTable;
@@ -25,7 +25,7 @@ typedef struct directoryTable {
 typedef struct fileAllocationTable {
   int isBusy; /* 0 for false or 1 for true */
   int nextBlockIndex;
-}
+} fileAllocationTable;
 
 //My fileSystem functions
 int fs_mkdir(char*);
@@ -44,22 +44,27 @@ int fs_exit();
 
 int main() {
   char command[MAX_STR];
+  char tokenCommand[MAX_STR];
 
-fprintf(stderr, "  ____________                   \n");
-fprintf(stderr, " < fileSystem >                  \n");
-fprintf(stderr, "  ------------                   \n");
-fprintf(stderr, "         \\   ^__^               \n");
-fprintf(stderr, "          \\  (oo)\\_______      \n");
-fprintf(stderr, "             (__)\\       )\\/\\ \n");
-fprintf(stderr, "                 ||----w |       \n");
-fprintf(stderr, "                 ||     ||       \n");
-
+  fprintf(stderr, "  ____________                   \n");
+  fprintf(stderr, " < fileSystem >                  \n");
+  fprintf(stderr, "  ------------                   \n");
+  fprintf(stderr, "         \\   ^__^               \n");
+  fprintf(stderr, "          \\  (oo)\\_______      \n");
+  fprintf(stderr, "             (__)\\       )\\/\\ \n");
+  fprintf(stderr, "                 ||----w |       \n");
+  fprintf(stderr, "                 ||     ||       \n");
 
   while(1) {
     fprintf(stdout, "->");
     fgets(command, sizeof(command), stdin);
     if (command[strlen(command)-1] == '\n')
       command[strlen(command)-1] = '\0';
+
+    strcpy(tokenCommand, command);
+    char *parameter = strtok(tokenCommand, " ");
+
+    fprintf(stderr, "%s\n", parameter);
 
     if (strcmp(command, "mkdir") == 0)
       fs_mkdir("");
