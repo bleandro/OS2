@@ -142,8 +142,22 @@ int fs_mkdir(char* parameter) {
   dt_directoryTable[blank_dt_index].metadata.type = dt_directory;
 }
 
+int fs_rmdir(char* parameter) {
+  int dir_index;
+  for(dir_index = 0; dir_index < MAX_DIR_NUMBER; dir_index++)
+    if (strcmp(dt_directoryTable[dir_index].fileName, parameter) == 0)
+      break;
+
+  int startingSector = dt_directoryTable[dir_index].startingSector;
+  int startingBlockIndex = dt_directoryTable[dir_index].startingBlockIndex;
+
+  fat_fileAllocationTable[startingSector][startingBlockIndex].isBusy = 0;
+
+  dt_directoryTable[dir_index].startingSector = -1;
+  dt_directoryTable[dir_index].startingBlockIndex = -1;
+}
+
 int fs_mkfile(char* parameter) { fprintf(stderr, "mkfile: UNDER DEVELOPMENT\n"); }
-int fs_rmdir(char* parameter) { fprintf(stderr, "rmdir: UNDER DEVELOPMENT\n"); }
 int fs_rmfile(char* parameter) { fprintf(stderr, "rmfile: UNDER DEVELOPMENT\n"); }
 int fs_lsdir(char* parameter) { fprintf(stderr, "lsdir: UNDER DEVELOPMENT\n"); }
 int fs_lssec(char* parameter) { fprintf(stderr, "lssec: UNDER DEVELOPMENT\n"); }
@@ -180,10 +194,6 @@ int fs_tree_aux(int parentBlock, int level) {
   }
 }
 
-int str_startsWith(const char *str, const char *pre) {
-    return strncmp(pre, str, strlen(pre)) == 0;
-}
-
 int fs_help() {
   fprintf(stderr, "mkdir [path/]dirName    -> Creates directory\n");
   fprintf(stderr, "mkfile [path/]fileName  -> Creates file\n");
@@ -206,11 +216,14 @@ int fs_exit() {
   exit(0);
 }
 
-// Auxiliar functions
+// I'm lazy and don't want to separate in .h files
+//-------------------------------------- Auxiliar functions ---------------------------------------
 void init_directoryTable() {
   int i;
-  for(i = 0; i < MAX_DIR_NUMBER; i++)
+  for(i = 0; i < MAX_DIR_NUMBER; i++) {
+    dt_directoryTable[i].startingSector = -1;
     dt_directoryTable[i].startingBlockIndex = -1;
+  }
 }
 
 void init_fileAllocationTable() {
@@ -220,4 +233,8 @@ void init_fileAllocationTable() {
       fat_fileAllocationTable[i][j].nextBlockIndex = -1;
       fat_fileAllocationTable[i][j].isBusy = 0;
     }
+}
+
+int str_startsWith(const char *str, const char *pre) {
+  return strncmp(pre, str, strlen(pre)) == 0;
 }
