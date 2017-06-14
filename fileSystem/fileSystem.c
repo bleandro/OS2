@@ -126,7 +126,7 @@ int fs_mkdir(char* parameter) {
       break; // Stop "FOR" cause We've found one blank space
 
   int sec_iteration, blank_fat_index, foundSpace = 0;
-  for(sec_iteration = SYSTEM_RESERVED_SPACE+1; (sec_iteration < SECTORS_NUMBER) && (!foundSpace); sec_iteration++)
+  for(sec_iteration = SYSTEM_RESERVED_SPACE; (sec_iteration < SECTORS_NUMBER) && (!foundSpace); sec_iteration++)
     for(blank_fat_index = 0; (blank_fat_index < BYTES_BY_SECTOR) && (!foundSpace); blank_fat_index++)
       if (fat_fileAllocationTable[sec_iteration][blank_fat_index].isBusy == 0)
         foundSpace = 1; // Stop "FOR" cause We've found one blank space
@@ -161,7 +161,29 @@ int fs_mkfile(char* parameter) { fprintf(stderr, "mkfile: UNDER DEVELOPMENT\n");
 int fs_rmfile(char* parameter) { fprintf(stderr, "rmfile: UNDER DEVELOPMENT\n"); }
 int fs_lsdir(char* parameter) { fprintf(stderr, "lsdir: UNDER DEVELOPMENT\n"); }
 int fs_lssec(char* parameter) { fprintf(stderr, "lssec: UNDER DEVELOPMENT\n"); }
-int fs_map() { fprintf(stderr, "map: UNDER DEVELOPMENT\n"); }
+
+int fs_map() {
+  int sec_iteration, byte_iteration, sector_busy = 0;
+
+  for(sec_iteration = 0; sec_iteration < SECTORS_NUMBER; sec_iteration++) {
+    sector_busy = 0;
+
+    for(byte_iteration = 0; byte_iteration < BYTES_BY_SECTOR; byte_iteration++) {
+      if (fat_fileAllocationTable[sec_iteration][byte_iteration].isBusy == 1)
+        sector_busy = 1;
+    }
+
+    if (sec_iteration < SYSTEM_RESERVED_SPACE)
+      fprintf(stdout, " ");
+    else if (sector_busy == 1)
+      fprintf(stdout, "\\");
+    else
+      fprintf(stdout, "|");
+
+  }
+
+  fprintf(stdout, "\n");
+}
 
 int fs_tree() {
   fprintf(stdout, "ROOT\n");
